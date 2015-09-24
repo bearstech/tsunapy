@@ -22,6 +22,23 @@ class Chrono:
                            (self.loop.time() - self.clock))])
         )
 
+class Session:
+
+    def __init__(self, session, redis, loop):
+        self.session = session
+        self.redis = redis
+        self.loop = loop
+
+    def chrono(self, *args):
+        return Chrono(self.redis, self.loop, args)
+
+    @asyncio.coroutine
+    def get(self, tags, url, *args, **kargs):
+        with self.chrono(*tags):
+            resp = yield from self.session.get(url, *args, **kargs)
+            body = yield from resp.read()
+        return resp, body
+
 
 class Application(dict):
 
@@ -33,6 +50,9 @@ class Application(dict):
 
     def chrono(self, *args):
         return Chrono(self['redis'], self.loop, args)
+
+    def session(self):
+        return Session(aiohttp.ClientSession(loop=self.loop), self['redis'], self.loop)
 
     @asyncio.coroutine
     def forever(self):
