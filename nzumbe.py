@@ -1,4 +1,10 @@
+"""
+It's a vaudou pattern, one bokor (named Boniface) command an army of nzumbes.
+
+Nzumbes listen redis, Boniface talk to Redis.
+"""
 import asyncio
+
 
 class Boniface:
     """
@@ -23,6 +29,7 @@ class Nzumbe:
     See: https://en.wikipedia.org/wiki/Zombie_(folklore)
     """
     # TODO : implement message box?
+    # TODO : multiplex messages, less connection for Redis, more for the load.
 
     def __init__(self, redis, chan=[], queue=[]):
         self._loop = redis._loop
@@ -75,13 +82,14 @@ class Nzumbe:
         self._running = True
         if len(self.chan):
             subscriber = yield from self._redis.start_subscribe()
-            chan = yield from subscriber.subscribe(self.chan)
-            self._task_pubsub = self._loop.create_task(self.loop_pubsub(subscriber))
+            yield from subscriber.subscribe(self.chan)
+            self._task_pubsub = self._loop.create_task(
+                                                self.loop_pubsub(subscriber))
 
     @asyncio.coroutine
     def forever(self):
         if len(self.queue):
-            try :
+            try:
                 self._task_queue = yield from self.loop_queue()
             except asyncio_redis.exceptions.ConnectionLostError as e:
                 if self._running:
@@ -118,6 +126,5 @@ if __name__ == '__main__':
     b = Boniface(redis)
     loop.run_until_complete(b.publish('the_chan', u'blah'))
     loop.run_until_complete(b.task('first_queue', u'hop'))
-    #loop.run_until_complete(asyncio.sleep(30))
     loop.run_until_complete(z.close())
     loop.close()

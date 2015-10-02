@@ -1,13 +1,9 @@
-import json
 import asyncio
 
 import asyncio_redis
 import aiohttp
-from aiohttp.client import ClientSession
 
 from uuid import uuid4
-
-from nzumbe import Nzumbe
 
 
 class Chrono:
@@ -49,7 +45,9 @@ class Session:
 
     def close(self):
         self.loop.create_task(self.redis.lpush(
-                'stats', ["%s|scenario|%f"  % (self.uuid, self.loop.time() - self._clock)]))
+                'stats', ["%s|scenario|%f" % (self.uuid,
+                                              self.loop.time() - self._clock)])
+        )
         self.session.close()
 
 
@@ -62,21 +60,6 @@ class Application(dict):
         return Chrono(self['redis'], self.loop, args)
 
     def session(self):
-        return Session(aiohttp.ClientSession(loop=self.loop), self['redis'], self.loop)
-
-
-@asyncio.coroutine
-def application_factory(application=Application, loop=asyncio.get_event_loop()):
-    app = application(loop)
-    app['redis'] = yield from asyncio_redis.Pool.create(host='127.0.0.1',
-                                                        port=6379, poolsize=10)
-    return app
-
-
-class App:
-
-    def __init__(self, loop=asyncio.get_event_loop()):
-        self.loop = loop
-
-    def task(self):
-        pass
+        return Session(aiohttp.ClientSession(loop=self.loop),
+                       self['redis'],
+                       self.loop)
