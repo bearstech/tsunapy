@@ -11,17 +11,22 @@ class Chrono:
     def __init__(self, redis, loop, args):
         self.redis = redis
         self.loop = loop
-        self.args = args
+        self.args = list(args)
+
+    def tag(self, tag):
+        self.args.append(tag)
 
     def __enter__(self):
         self.clock = self.loop.time()
+        return self
 
     def __exit__(self, *args):
         self.loop.create_task(
             self.redis.lpush('stats', [
-                "%s|%f" % ("|".join(self.args),
-                           (self.loop.time() - self.clock))])
-        )
+                "%s|%f|%f" % ("|".join(self.args),
+                              (self.loop.time() - self.clock),
+                              self.clock
+                              )]))
 
 
 class Session:
@@ -38,8 +43,9 @@ class Session:
 
     @asyncio.coroutine
     def get(self, tag, url, *args, **kargs):
-        with self.chrono(self.uuid, tag):
+        with self.chrono(self.uuid, tag) as c:
             resp = yield from self.session.get(url, *args, **kargs)
+            c.tag(str(resp.status))
             body = yield from resp.read()
         return resp, body
 
