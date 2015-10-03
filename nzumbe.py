@@ -5,6 +5,8 @@ Nzumbes listen redis, Boniface talk to Redis.
 """
 import asyncio
 
+from asyncio_redis.exceptions import ConnectionLostError
+
 
 class Boniface:
     """
@@ -91,7 +93,7 @@ class Nzumbe:
         if len(self.queue):
             try:
                 self._task_queue = yield from self.loop_queue()
-            except asyncio_redis.exceptions.ConnectionLostError as e:
+            except ConnectionLostError as e:
                 if self._running:
                     raise e
 
